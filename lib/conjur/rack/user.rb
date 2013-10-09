@@ -18,7 +18,7 @@ module Conjur
         else
           [ tokens[0], tokens[1..-1].join('/') ]
         end
-        [ conjur_account, role_kind, roleid ].join(':')
+        [ account, role_kind, roleid ].join(':')
       end
       
       def role
