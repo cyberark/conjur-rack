@@ -9,7 +9,13 @@ describe Conjur::Rack::User do
   
   its(:token){ should == token }
   its(:account){ should == account }
+  its(:conjur_account){ should == account }
   its(:login){ should == token['data'] }
+  
+  it "aliases setter for account to conjur_account" do
+    subject.conjur_account = "changed!"
+    subject.account.should == "changed!"
+  end
   
   describe '#new_assocation' do
     let(:associate){ Class.new }

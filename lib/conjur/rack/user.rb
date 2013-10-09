@@ -3,6 +3,13 @@ require 'conjur/api'
 module Conjur
   module Rack
     User = Struct.new(:token, :account) do
+      
+      # This file was accidently calling account conjur_account,
+      # I'm adding an alias in case that's going on anywhere else.
+      # -- Jon
+      alias :conjur_account :account
+      alias :conjur_account= :account=
+      
       def new_association(cls, params = {})
         cls.new params.merge({userid: login})
       end
