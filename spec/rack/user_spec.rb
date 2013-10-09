@@ -24,7 +24,7 @@ describe Conjur::Rack::User do
     let(:login){ tokens.join('/') }
     context "when login contains one token 'foobar'" do
       let(:tokens){ ['foobar'] }
-      its(:roleid){ should == "#{account}:users:#{login}" } 
+      its(:roleid){ should == "#{account}:user:#{login}" } 
     end
     context "when login contains tokens ['foo', 'bar']" do
       let(:tokens){ ["foos", "bar"] }
