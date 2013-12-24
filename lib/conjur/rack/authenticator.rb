@@ -33,11 +33,10 @@ module Conjur
       def env; Thread.current[:rack_env] ; end
       def token; Thread.current[:conjur_rack_token] ; end
       def account; Thread.current[:conjur_rack_account]; end
-     
-
+ 
       def call rackenv
         # never store request-specific variables as application attributes 
-        Thread.current[:rack_env]=rackenv
+        Thread.current[:rack_env] = rackenv
         if authenticate?
           begin
             identity = verify_authorization_and_get_identity # [token, account]
@@ -53,17 +52,17 @@ module Conjur
         begin
           @app.call rackenv
         ensure
-          Thread.current[:rack_env]=nil
+          Thread.current[:rack_env] = nil
           Thread.current[:conjur_rack_identity] = nil
-          Thread.current[:conjur_rack_token]=nil
-          Thread.current[:conjur_rack_account]=nil
+          Thread.current[:conjur_rack_token] = nil
+          Thread.current[:conjur_rack_account] = nil
         end
       end
       
       protected
       
       def validate_token_and_get_account token
-        failure=SignatureError.new("Unathorized: Invalid token")
+        failure = SignatureError.new("Unathorized: Invalid token")
         raise failure unless (signer = Slosilo.token_signer token)
         raise failure unless signer =~ /^authn:(.+)$/
         return $1
@@ -76,7 +75,7 @@ module Conjur
       def verify_authorization_and_get_identity
         if authorization.to_s[/^Token token="(.*)"/]
           token = JSON.parse(Base64.decode64($1))
-          account=validate_token_and_get_account(token)
+          account = validate_token_and_get_account(token)
           return [token, account]
         else
           raise AuthorizationError.new("Authorization missing")
