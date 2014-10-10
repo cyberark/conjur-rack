@@ -64,7 +64,7 @@ module Conjur
       def validate_token_and_get_account token
         failure = SignatureError.new("Unathorized: Invalid token")
         raise failure unless (signer = Slosilo.token_signer token)
-        raise failure unless signer =~ /^authn:(.+)$/
+        raise failure unless signer =~ /\Aauthn:(.+)\z/
         return $1
       end
       
