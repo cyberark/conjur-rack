@@ -27,8 +27,8 @@ describe Conjur::Rack::Authenticator do
         }
 
         it 'launches app' do
-          app.should_receive(:call).with(env).and_return app
-          call.should == app
+          expect(app).to receive(:call).with(env).and_return app
+          expect(call).to eq(app)
         end
 
         context 'Authable provides module method conjur_user' do
@@ -37,29 +37,29 @@ describe Conjur::Rack::Authenticator do
 
           context 'when called in app context' do
             it 'returns User built from token' do
-              app.stub(:call) { Conjur::Rack.user }
-              Conjur::Rack::User.should_receive(:new).
+              allow(app).to receive(:call) { Conjur::Rack.user }
+              expect(Conjur::Rack::User).to receive(:new).
                 with(token, sample_account).and_return(stubuser)
-              Conjur::Rack.should_receive(:user).and_call_original
-              call.should == stubuser      
+              expect(Conjur::Rack).to receive(:user).and_call_original
+              expect(call).to eq(stubuser)      
             end
           end
 
           context 'called out of app context' do
-            it { lambda { Conjur::Rack.user }.should raise_error }
+            it { expect { Conjur::Rack.user }.to raise_error }
           end
         end
       end
       context "of an invalid token" do
         it "returns a 401 error" do
           Slosilo.stub token_signer: nil
-          call.should == [401, {"Content-Type"=>"text/plain", "Content-Length"=>"26"}, ["Unathorized: Invalid token"]]
+          expect(call).to eq([401, {"Content-Type"=>"text/plain", "Content-Length"=>"26"}, ["Unathorized: Invalid token"]])
         end
       end
       context "of a token invalid for authn" do
         it "returns a 401 error" do
           Slosilo.stub token_signer: 'a-totally-different-key'
-          call.should == [401, {"Content-Type"=>"text/plain", "Content-Length"=>"26"}, ["Unathorized: Invalid token"]]
+          expect(call).to eq([401, {"Content-Type"=>"text/plain", "Content-Length"=>"26"}, ["Unathorized: Invalid token"]])
         end
       end
     end
@@ -68,7 +68,7 @@ describe Conjur::Rack::Authenticator do
     context "to a protected path" do
       let(:env) { { 'SCRIPT_NAME' => '/pathname' } }
       it "returns a 401 error" do
-        call.should == [401, {"Content-Type"=>"text/plain", "Content-Length"=>"21"}, ["Authorization missing"]]
+        expect(call).to eq([401, {"Content-Type"=>"text/plain", "Content-Length"=>"21"}, ["Authorization missing"]])
       end
     end
     context "to an unprotected path" do
@@ -76,8 +76,8 @@ describe Conjur::Rack::Authenticator do
       let(:env) { { 'SCRIPT_NAME' => '', 'PATH_INFO' => '/foo/bar' } }
       it "proceeds" do
         options[:except] = except
-        app.should_receive(:call).with(env).and_return app
-        call.should == app
+        expect(app).to receive(:call).with(env).and_return app
+        expect(call).to eq(app)
       end
     end
   end

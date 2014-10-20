@@ -17,21 +17,21 @@ describe Conjur::Rack::PathPrefix do
     context "/api/hosts" do
       let(:path) { "/api/hosts" }
       it "matches" do
-        app.should_receive(:call).with({ 'PATH_INFO' => '/hosts' }).and_return app
+        expect(app).to receive(:call).with({ 'PATH_INFO' => '/hosts' }).and_return app
         call
       end
     end
     context "/api" do
       let(:path) { "/api" }
       it "doesn't erase the path completely" do
-        app.should_receive(:call).with({ 'PATH_INFO' => '/' }).and_return app
+        expect(app).to receive(:call).with({ 'PATH_INFO' => '/' }).and_return app
         call
       end
     end
     context "with non-matching prefix" do
       let(:path) { "/hosts" }
       it "doesn't match" do
-        app.should_receive(:call).with({ 'PATH_INFO' => '/hosts' }).and_return app
+        expect(app).to receive(:call).with({ 'PATH_INFO' => '/hosts' }).and_return app
         call
       end
     end
