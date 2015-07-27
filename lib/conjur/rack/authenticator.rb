@@ -7,11 +7,19 @@ module Conjur
     end
     
     def self.user
-      User.new(identity[0], identity[1])
+      User.new(identity[0], identity[1], privilege, remote_ip)
     end
     
     def self.identity
       Thread.current[:conjur_rack_identity] or raise "No Conjur identity for current request"
+    end
+    
+    def self.privilege
+      Thread.current[:conjur_rack_privilege]
+    end
+    
+    def self.remote_ip
+      Thread.current[:conjur_rack_remote_ip]
     end
   
     class Authenticator
@@ -33,6 +41,8 @@ module Conjur
       def env; Thread.current[:rack_env] ; end
       def token; Thread.current[:conjur_rack_token] ; end
       def account; Thread.current[:conjur_rack_account]; end
+      def privilege; Thread.current[:conjur_rack_privilege]; end
+      def remote_ip; Thread.current[:conjur_rack_remote_ip]; end
  
       def call rackenv
         # never store request-specific variables as application attributes 
@@ -44,6 +54,8 @@ module Conjur
             Thread.current[:conjur_rack_token] = identity[0]
             Thread.current[:conjur_rack_account] = identity[1]
             Thread.current[:conjur_rack_identity] = identity
+            Thread.current[:conjur_rack_privilege] = conjur_privilege
+            Thread.current[:conjur_rack_remote_ip] = remote_ip
 
           rescue SecurityError, RestClient::Exception
             return error 401, $!.message
@@ -56,6 +68,8 @@ module Conjur
           Thread.current[:conjur_rack_identity] = nil
           Thread.current[:conjur_rack_token] = nil
           Thread.current[:conjur_rack_account] = nil
+          Thread.current[:conjur_rack_privilege] = nil
+          Thread.current[:conjur_rack_remote_ip] = nil
         end
       end
       
@@ -89,9 +103,18 @@ module Conjur
           true
         end
       end
+
+      def conjur_privilege
+        env['HTTP_X_CONJUR_PRIVILEGE']
+      end
       
       def authorization
         env['HTTP_AUTHORIZATION']
+      end
+      
+      def remote_ip
+        require 'rack/request'
+        ::Rack::Request.new(env).ip
       end
       
       def path
