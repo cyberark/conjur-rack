@@ -14,11 +14,16 @@ describe Conjur::Rack::Authenticator do
       let(:env) {
         {
           'HTTP_AUTHORIZATION' => "Token token=\"#{basic_64}\""
-        }
+        }.tap do |e|
+          e['HTTP_X_CONJUR_PRIVILEGE'] = privilege if privilege
+          e['HTTP_X_FORWARDED_FOR'] = remote_ip if remote_ip
+        end
       }
       let(:basic_64) { Base64.strict_encode64(token.to_json) }
       let(:token) { { "data" => "foobar" } }
       let(:sample_account) { "someacc" }
+      let(:privilege) { nil }
+      let(:remote_ip) { nil }
 
       context "of a valid token" do
           
@@ -32,16 +37,36 @@ describe Conjur::Rack::Authenticator do
         end
 
         context 'Authable provides module method conjur_user' do
-
           let(:stubuser) { "some value" }
+          before {
+            app.stub(:call) { Conjur::Rack.user }
+          }
 
           context 'when called in app context' do
-            it 'returns User built from token' do
-              app.stub(:call) { Conjur::Rack.user }
+            let(:invoke) {
               Conjur::Rack::User.should_receive(:new).
-                with(token, sample_account).and_return(stubuser)
+                with(token, sample_account, privilege, remote_ip).
+                and_return(stubuser)
               Conjur::Rack.should_receive(:user).and_call_original
-              call.should == stubuser      
+              call
+            }
+            
+            shared_examples_for 'returns User built from token' do
+              specify { 
+                invoke.should == stubuser      
+              }
+            end
+            
+            it_should_behave_like 'returns User built from token'
+            
+            context 'with X-Conjur-Privilege' do
+              let(:privilege) { "sudo" }
+              it_should_behave_like 'returns User built from token'
+            end
+            
+            context 'with X-Forwarded-For' do
+              let(:remote_ip) { "66.0.0.1" }
+              it_should_behave_like 'returns User built from token'
             end
           end
 

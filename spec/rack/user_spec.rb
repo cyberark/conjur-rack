@@ -4,8 +4,10 @@ describe Conjur::Rack::User do
   let(:login){ 'admin' }
   let(:token){ {'data' => login} }
   let(:account){ 'acct' }
+  let(:privilege) { nil }
+  let(:remote_ip) { nil }
   
-  subject{ described_class.new token, account }
+  subject{ described_class.new token, account, privilege, remote_ip }
   
   its(:token){ should == token }
   its(:account){ should == account }
@@ -65,9 +67,32 @@ describe Conjur::Rack::User do
       end
     end
     context 'when not given args' do
-      it 'uses Conjur::API.new_from_token' do
-        Conjur::API.should_receive(:new_from_token).with(token).and_return 'the api'
-        subject.api.should == 'the api'
+      shared_examples_for "builds the api" do
+        specify {
+          subject.api.should == 'the api'
+        }
+      end
+      
+      context "with no extra args" do
+        before {
+          Conjur::API.should_receive(:new_from_token).with(token).and_return 'the api'
+        }
+        it_should_behave_like "builds the api"
+      end
+      context "with remote_ip" do
+        let(:remote_ip) { "the-ip" }
+        before {
+          Conjur::API.should_receive(:new_from_token).with(token, 'the-ip').and_return 'the api'
+        }
+        it_should_behave_like "builds the api"
+      end
+      context "with privilege" do
+        let(:privilege) { "sudo" }
+        before {
+          Conjur::API.should_receive(:new_from_token).with(token).and_return api = double(:api)
+          expect(api).to receive(:with_privilege).with("sudo").and_return('the api')
+        }
+        it_should_behave_like "builds the api"
       end
     end
   end

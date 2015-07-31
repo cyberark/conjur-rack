@@ -2,7 +2,15 @@ require 'conjur/api'
 
 module Conjur
   module Rack
-    User = Struct.new(:token, :account) do
+    class User
+      attr_accessor :token, :account, :privilege, :remote_ip
+      
+      def initialize(token, account, privilege = nil, remote_ip = nil)
+        @token = token
+        @account = account
+        @privilege = privilege
+        @remote_ip = remote_ip
+      end
       
       # This file was accidently calling account conjur_account,
       # I'm adding an alias in case that's going on anywhere else.
@@ -13,7 +21,7 @@ module Conjur
       def new_association(cls, params = {})
         cls.new params.merge({userid: login})
       end
-            
+
       def login
         token["data"] or raise "No data field in token"
       end
@@ -33,7 +41,14 @@ module Conjur
       end
       
       def api(cls = Conjur::API)
-        cls.new_from_token(token)
+        args = [ token ]
+        args.push remote_ip if remote_ip
+        api = cls.new_from_token(*args)
+        if privilege
+          api.with_privilege(privilege)
+        else
+          api
+        end
       end
     end
   end
