@@ -21,7 +21,31 @@ module Conjur
       def new_association(cls, params = {})
         cls.new params.merge({userid: login})
       end
-
+      
+      # Returns the global privilege which was present on the request, if and only
+      # if the user actually has that privilege.
+      #
+      # Returns nil if no global privilege was present in the request headers, 
+      # or if a global privilege was present in the request headers, but the user doesn't
+      # actually have that privilege according to the Conjur server.
+      def validated_global_privilege
+        unless @validated_global_privilege
+          @privilege = nil if @privilege && !api.global_privilege_permitted?(@privilege)
+          @validated_global_privilege = true
+        end
+        @privilege
+      end
+      
+      # True if and only if the user has valid global 'reveal' privilege.
+      def global_reveal?
+        validated_global_privilege == "reveal"
+      end
+      
+      # True if and only if the user has valid global 'sudo' privilege.
+      def global_sudo?
+        validated_global_privilege == "sudo"
+      end
+      
       def login
         token["data"] or raise "No data field in token"
       end
