@@ -58,6 +58,28 @@ describe Conjur::Rack::User do
     end
   end
   
+  describe "#global_reveal?" do
+    context "with global privilege" do
+      let(:privilege) { "reveal" }
+      let(:api){ Conjur::API.new_from_token "the-token" }
+      before do
+        subject.stub(:api).and_return api
+      end
+      it "checks the API function global_privilege_permitted?" do
+        api.should_receive(:resource).with("!:!:conjur").and_return resource = double(:resource)
+        resource.should_receive(:permitted?).with("reveal").and_return true
+        expect(subject.global_reveal?).to be_true
+        # The result is cached
+        subject.global_reveal?
+      end
+    end
+    context "without a global privilege" do
+      it "simply returns nil" do
+        expect(subject.global_reveal?).to be_false
+      end
+    end
+  end
+  
   describe '#api' do
     context "when given a class" do
       let(:cls){ double('API class') }
