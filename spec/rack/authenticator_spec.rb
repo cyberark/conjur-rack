@@ -7,30 +7,33 @@ describe Conjur::Rack::Authenticator do
   let(:options) { {} }
   let(:authenticator) { Conjur::Rack::Authenticator.new(app, options) }
   let(:call) { authenticator.call env }
+  let(:privilege) { nil }
+  let(:remote_ip) { nil }    
+  let(:sample_account) { "someacc" }
+    
+  shared_context "with authorization" do
+    before {
+      stub_const 'Slosilo', Module.new 
+      Slosilo.stub token_signer: 'authn:'+sample_account
+    }
+    let(:env) {
+      {
+        'HTTP_AUTHORIZATION' => "Token token=\"#{basic_64}\""
+      }.tap do |e|
+        e['HTTP_X_CONJUR_PRIVILEGE'] = privilege if privilege
+        e['HTTP_X_FORWARDED_FOR'] = remote_ip if remote_ip
+      end
+    }
+    let(:basic_64) { Base64.strict_encode64(token.to_json) }
+    let(:token) { { "data" => "foobar" } }
+  end
   
   context "#call" do
     context "with Conjur authorization" do
-      before{ stub_const 'Slosilo', Module.new }
-      let(:env) {
-        {
-          'HTTP_AUTHORIZATION' => "Token token=\"#{basic_64}\""
-        }.tap do |e|
-          e['HTTP_X_CONJUR_PRIVILEGE'] = privilege if privilege
-          e['HTTP_X_FORWARDED_FOR'] = remote_ip if remote_ip
-        end
-      }
-      let(:basic_64) { Base64.strict_encode64(token.to_json) }
-      let(:token) { { "data" => "foobar" } }
-      let(:sample_account) { "someacc" }
-      let(:privilege) { nil }
-      let(:remote_ip) { nil }
+      include_context "with authorization"
 
       context "of a valid token" do
           
-        before(:each) {
-          Slosilo.stub token_signer: 'authn:'+sample_account
-        }
-
         it 'launches app' do
           app.should_receive(:call).with(env).and_return app
           call.should == app
@@ -89,20 +92,58 @@ describe Conjur::Rack::Authenticator do
       end
     end
   end
-  context "without authorization" do
-    context "to a protected path" do
+  context "to a protected path" do
+    context "without authorization" do
       let(:env) { { 'SCRIPT_NAME' => '/pathname' } }
       it "returns a 401 error" do
         call.should == [401, {"Content-Type"=>"text/plain", "Content-Length"=>"21"}, ["Authorization missing"]]
       end
     end
-    context "to an unprotected path" do
-      let(:except) { [ /^\/foo/ ] }
-      let(:env) { { 'SCRIPT_NAME' => '', 'PATH_INFO' => '/foo/bar' } }
+  end
+  context "to an optional path" do
+    let(:optional) { [ /^\/foo/ ] }
+    let(:env) { { 'SCRIPT_NAME' => '', 'PATH_INFO' => '/foo/bar' } }
+    before {
+      options[:optional] = optional
+    }
+    context "without authorization" do
       it "proceeds" do
-        options[:except] = except
-        app.should_receive(:call).with(env).and_return app
+        expect(app).to receive(:call) do |*args|
+          expect(Conjur::Rack.identity?).to be(false)
+          :done
+        end
+        call.should == :done
+      end
+    end
+    context "with authorization" do
+      include_context "with authorization"
+      it "processes the authorization" do
+        expect(app).to receive(:call) do |*args|
+          expect(Conjur::Rack.identity?).to be(true)
+          :done
+        end
+        call.should == :done
+      end
+    end
+  end
+  context "to an unprotected path" do
+    let(:except) { [ /^\/foo/ ] }
+    let(:env) { { 'SCRIPT_NAME' => '', 'PATH_INFO' => '/foo/bar' } }
+    before {
+      options[:except] = except
+      app.should_receive(:call).with(env).and_return app
+    }
+    context "without authorization" do
+      it "proceeds" do
         call.should == app
+        expect(Conjur::Rack.identity?).to be(false)
+      end
+    end
+    context "with authorization" do
+      include_context "with authorization"
+      it "ignores the authorization" do
+        call.should == app
+        expect(Conjur::Rack.identity?).to be(false)
       end
     end
   end

@@ -31,7 +31,8 @@ module Conjur
       attr_reader :app, :options
       
       # +options+:
-      # :except :: a list of request path patterns for which to skip authentication
+      # :except :: a list of request path patterns for which to skip authentication.
+      # :optional :: request path patterns for which authentication is optional.
       def initialize app, options = {}
         @app = app
         @options = options
@@ -50,13 +51,13 @@ module Conjur
         if authenticate?
           begin
             identity = verify_authorization_and_get_identity # [token, account]
-             
-            Thread.current[:conjur_rack_token] = identity[0]
-            Thread.current[:conjur_rack_account] = identity[1]
-            Thread.current[:conjur_rack_identity] = identity
-            Thread.current[:conjur_rack_privilege] = conjur_privilege
-            Thread.current[:conjur_rack_remote_ip] = remote_ip
-
+            if identity
+              Thread.current[:conjur_rack_token] = identity[0]
+              Thread.current[:conjur_rack_account] = identity[1]
+              Thread.current[:conjur_rack_identity] = identity
+              Thread.current[:conjur_rack_privilege] = conjur_privilege
+              Thread.current[:conjur_rack_remote_ip] = remote_ip
+            end
           rescue SecurityError, RestClient::Exception
             return error 401, $!.message
           end
@@ -92,7 +93,11 @@ module Conjur
           account = validate_token_and_get_account(token)
           return [token, account]
         else
-          raise AuthorizationError.new("Authorization missing")
+          if optional_paths.find{|p| p.match(path)}.nil?
+            raise AuthorizationError.new("Authorization missing")
+          else
+            nil
+          end
         end
       end
       
@@ -102,6 +107,10 @@ module Conjur
         else
           true
         end
+      end
+      
+      def optional_paths
+        options[:optional] || []
       end
 
       def conjur_privilege
