@@ -9,12 +9,12 @@ describe Conjur::Rack::Authenticator do
   let(:call) { authenticator.call env }
   let(:privilege) { nil }
   let(:remote_ip) { nil }    
-  let(:sample_account) { "someacc" }
+  let(:token_signer) { "authn:someacc" }
     
   shared_context "with authorization" do
     before {
       stub_const 'Slosilo', Module.new 
-      Slosilo.stub token_signer: 'authn:'+sample_account
+      Slosilo.stub token_signer: token_signer
     }
     let(:env) {
       {
@@ -48,7 +48,7 @@ describe Conjur::Rack::Authenticator do
           context 'when called in app context' do
             let(:invoke) {
               Conjur::Rack::User.should_receive(:new).
-                with(token, sample_account, privilege, remote_ip).
+                with(token, 'someacc', privilege, remote_ip).
                 and_return(stubuser)
               Conjur::Rack.should_receive(:user).and_call_original
               call
@@ -87,6 +87,23 @@ describe Conjur::Rack::Authenticator do
       context "of a token invalid for authn" do
         it "returns a 401 error" do
           Slosilo.stub token_signer: 'a-totally-different-key'
+          call.should == [401, {"Content-Type"=>"text/plain", "Content-Length"=>"26"}, ["Unathorized: Invalid token"]]
+        end
+      end
+      context "of 'own' token" do
+        it "returns ENV['CONJUR_ACCOUNT']" do
+          expect(ENV).to receive(:[]).with("CONJUR_ACCOUNT").and_return("test-account")
+          expect(app).to receive(:call) do |*args|
+            expect(Conjur::Rack.identity?).to be(true)
+            expect(Conjur::Rack.user.account).to eq('test-account')
+            :done
+          end
+          Slosilo.stub token_signer: 'own'
+          call.should == :done
+        end
+        it "requires ENV['CONJUR_ACCOUNT']" do
+          expect(ENV).to receive(:[]).with("CONJUR_ACCOUNT").and_return(nil)
+          Slosilo.stub token_signer: 'own'
           call.should == [401, {"Content-Type"=>"text/plain", "Content-Length"=>"26"}, ["Unathorized: Invalid token"]]
         end
       end
