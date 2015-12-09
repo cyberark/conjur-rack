@@ -5,26 +5,13 @@ describe Conjur::Rack::User do
   let(:token){ {'data' => login} }
   let(:account){ 'acct' }
   
-  subject{ described_class.new token, account }
+  subject(:user) { described_class.new token, account }
   
-  describe '#token' do
-    subject { super().token }
-    it { is_expected.to eq(token) }
-  end
-
-  describe '#account' do
-    subject { super().account }
-    it { is_expected.to eq(account) }
-  end
-
-  describe '#conjur_account' do
-    subject { super().conjur_account }
-    it { is_expected.to eq(account) }
-  end
-
-  describe '#login' do
-    subject { super().login }
-    it { is_expected.to eq(token['data']) }
+  it 'provides field accessors' do
+    expect(user.token).to eq token
+    expect(user.account).to eq account
+    expect(user.conjur_account).to eq account
+    expect(user.login).to eq login
   end
   
   it "aliases setter for account to conjur_account" do
@@ -43,28 +30,28 @@ describe Conjur::Rack::User do
   
   describe '#roleid' do
     let(:login){ tokens.join('/') }
-    context "when login contains one token 'foobar'" do
-      let(:tokens){ ['foobar'] }
 
-      describe '#roleid' do
-        subject { super().roleid }
-        it { is_expected.to eq("#{account}:user:#{login}") }
-      end 
-    end
-    context "when login contains tokens ['foo', 'bar']" do
-      let(:tokens){ ["foos", "bar"] }
+    context "when login contains one token" do
+      let(:tokens) { %w(foobar) }
 
-      describe '#roleid' do
-        subject { super().roleid }
-        it { is_expected.to eq("#{account}:#{tokens[0]}:#{tokens[1]}")}
+      it "is expanded to account:user:token" do
+        expect(subject.roleid).to eq "#{account}:user:foobar"
       end
     end
-    context "when login contains tokens ['foo','bar','baz']" do
-      let(:tokens){ ['foo', 'bar', 'baz'] }
 
-      describe '#roleid' do
-        subject { super().roleid }
-        it { is_expected.to eq("#{account}:#{tokens[0]}:#{tokens[1]}/#{tokens[2]}") }
+    context "when login contains two tokens" do
+      let(:tokens) { %w(foo bar) }
+
+      it "is expanded to account:first:second" do
+        expect(subject.roleid).to eq "#{account}:foo:bar"
+      end
+    end
+
+    context "when login contains three tokens" do
+      let(:tokens) { %w(foo bar baz) }
+
+      it "is expanded to account:first:second/third" do
+        expect(subject.roleid).to eq "#{account}:foo:bar/baz"
       end
     end
   end
@@ -108,11 +95,14 @@ describe Conjur::Rack::User do
   
   describe "hash payload" do
     let(:token){ { "data" => { "login" => "alice", "capabilities" => { "fry" => "bacon" } } } }
+
     it "process the login and attributes" do
+      original_token = token.deep_dup
+
       expect(subject.login).to eq('alice')
       expect(subject.attributes).to eq({"capabilities" => { "fry" => "bacon" }})
-      # Don't mutate the token
-      expect(token).to eq(token)
+
+      expect(token).to eq original_token
     end
   end
 end
