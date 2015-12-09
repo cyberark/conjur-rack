@@ -2,6 +2,9 @@ require 'conjur/api'
 
 module Conjur
   module Rack
+    # Token data can be a string (which is the user login), or a Hash.
+    # If it's a hash, it should contain the user login keyed by the string 'login'.
+    # The rest of the payload is available as +attributes+.
     class User
       attr_accessor :token, :account, :privilege, :remote_ip
       
@@ -47,7 +50,15 @@ module Conjur
       end
       
       def login
-        token["data"] or raise "No data field in token"
+        parse_token
+
+        @login
+      end
+
+      def attributes
+        parse_token
+
+        @attributes || {}
       end
       
       def roleid
@@ -72,6 +83,22 @@ module Conjur
           api.with_privilege(privilege)
         else
           api
+        end
+      end
+
+      protected
+
+      def parse_token
+        return if @login
+
+        data = token['data'] or raise "No data field in token"
+        if data.is_a?(String)
+          @login = token['data']
+        elsif data.is_a?(Hash)
+          @attributes = token['data'].clone
+          @login = @attributes.delete('login') or raise "No 'login' field in token data"
+        else
+          raise "Expecting String or Hash token data, got #{data.class.name}"
         end
       end
     end
