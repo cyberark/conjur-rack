@@ -60,7 +60,7 @@ describe Conjur::Rack::Authenticator do
             it_should_behave_like 'returns User built from token'
             
             context 'with X-Conjur-Privilege' do
-              let(:privilege) { "sudo" }
+              let(:privilege) { "elevate" }
               it_should_behave_like 'returns User built from token'
             end
             

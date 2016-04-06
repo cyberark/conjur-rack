@@ -44,9 +44,9 @@ module Conjur
         validated_global_privilege == "reveal"
       end
       
-      # True if and only if the user has valid global 'sudo' privilege.
-      def global_sudo?
-        validated_global_privilege == "sudo"
+      # True if and only if the user has valid global 'elevate' privilege.
+      def global_elevate?
+        validated_global_privilege == "elevate"
       end
       
       def login

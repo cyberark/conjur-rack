@@ -123,10 +123,10 @@ describe Conjur::Rack::User do
         it_should_behave_like "builds the api"
       end
       context "with privilege" do
-        let(:privilege) { "sudo" }
+        let(:privilege) { "elevate" }
         before {
           Conjur::API.should_receive(:new_from_token).with(token).and_return api = double(:api)
-          expect(api).to receive(:with_privilege).with("sudo").and_return('the api')
+          expect(api).to receive(:with_privilege).with("elevate").and_return('the api')
         }
         it_should_behave_like "builds the api"
       end
