@@ -1,3 +1,7 @@
+# v2.0.0
+
+* Change `global_sudo?` to `global_elevate?`
+
 # v1.4.0
 
 * Add `validated_global_privilege` helper function to get the global privilege, if any, which has been submitted with the request and verified by the Conjur server.
