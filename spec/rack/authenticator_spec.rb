@@ -78,13 +78,13 @@ describe Conjur::Rack::Authenticator do
       context "of an invalid token" do
         it "returns a 401 error" do
           Slosilo.stub token_signer: nil
-          expect(call).to eq([401, {"Content-Type"=>"text/plain", "Content-Length"=>"26"}, ["Unauthorized: Invalid token"]])
+          expect(call).to eq([401, {"Content-Type"=>"text/plain", "Content-Length"=>"27"}, ["Unauthorized: Invalid token"]])
         end
       end
       context "of a token invalid for authn" do
         it "returns a 401 error" do
           Slosilo.stub token_signer: 'a-totally-different-key'
-          expect(call).to eq([401, {"Content-Type"=>"text/plain", "Content-Length"=>"26"}, ["Unauthorized: Invalid token"]])
+          expect(call).to eq([401, {"Content-Type"=>"text/plain", "Content-Length"=>"27"}, ["Unauthorized: Invalid token"]])
         end
       end
     end
