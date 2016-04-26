@@ -2,25 +2,37 @@ require "conjur/rack/user"
 
 module Conjur
   module Rack
-    def self.identity?
-      !Thread.current[:conjur_rack_identity].nil?
+
+    class << self
+      def conjur_rack
+        Thread.current[:conjur_rack] ||= {}
+      end
+
+      def identity?
+        !conjur_rack[:identity].nil?
+      end
+      
+      def user
+        User.new(identity[0], identity[1], 
+          :privilege => privilege, 
+          :remote_ip => remote_ip, 
+          :audit_roles => audit_roles, 
+          :audit_resources => audit_resources
+          )
+      end
+      
+      def identity
+        conjur_rack[:identity] or raise "No Conjur identity for current request"
+      end
+
+      # class attributes
+      [:privilege, :remote_ip, :audit_roles, :audit_resources].each do |a|
+        define_method(a) do
+          conjur_rack[a]
+        end
+      end
     end
-    
-    def self.user
-      User.new(identity[0], identity[1], privilege, remote_ip)
-    end
-    
-    def self.identity
-      Thread.current[:conjur_rack_identity] or raise "No Conjur identity for current request"
-    end
-    
-    def self.privilege
-      Thread.current[:conjur_rack_privilege]
-    end
-    
-    def self.remote_ip
-      Thread.current[:conjur_rack_remote_ip]
-    end
+
   
     class Authenticator
       class AuthorizationError < SecurityError
@@ -39,10 +51,13 @@ module Conjur
 
       # threadsafe accessors, values are established explicitly below
       def env; Thread.current[:rack_env] ; end
-      def token; Thread.current[:conjur_rack_token] ; end
-      def account; Thread.current[:conjur_rack_account]; end
-      def privilege; Thread.current[:conjur_rack_privilege]; end
-      def remote_ip; Thread.current[:conjur_rack_remote_ip]; end
+
+      # instance attributes
+      [:token, :account, :privilege, :remote_ip, :audit_roles, :audit_resources].each do |a|
+        define_method(a) do
+          conjur_rack[a]
+        end
+      end
  
       def call rackenv
         # never store request-specific variables as application attributes 
@@ -51,11 +66,13 @@ module Conjur
           begin
             identity = verify_authorization_and_get_identity # [token, account]
              
-            Thread.current[:conjur_rack_token] = identity[0]
-            Thread.current[:conjur_rack_account] = identity[1]
-            Thread.current[:conjur_rack_identity] = identity
-            Thread.current[:conjur_rack_privilege] = conjur_privilege
-            Thread.current[:conjur_rack_remote_ip] = remote_ip
+            conjur_rack[:token] = identity[0]
+            conjur_rack[:account] = identity[1]
+            conjur_rack[:identity] = identity
+            conjur_rack[:privilege] = http_privilege
+            conjur_rack[:remote_ip] = http_remote_ip
+            conjur_rack[:audit_roles] = http_audit_roles
+            conjur_rack[:audit_resources] = http_audit_resources
 
           rescue SecurityError, RestClient::Exception
             return error 401, $!.message
@@ -65,16 +82,16 @@ module Conjur
           @app.call rackenv
         ensure
           Thread.current[:rack_env] = nil
-          Thread.current[:conjur_rack_identity] = nil
-          Thread.current[:conjur_rack_token] = nil
-          Thread.current[:conjur_rack_account] = nil
-          Thread.current[:conjur_rack_privilege] = nil
-          Thread.current[:conjur_rack_remote_ip] = nil
+          Thread.current[:conjur_rack] = {}
         end
       end
       
       protected
       
+      def conjur_rack
+        Conjur::Rack.conjur_rack
+      end
+
       def validate_token_and_get_account token
         failure = SignatureError.new("Unauthorized: Invalid token")
         raise failure unless (signer = Slosilo.token_signer token)
@@ -87,7 +104,7 @@ module Conjur
       end
       
       def verify_authorization_and_get_identity
-        if authorization.to_s[/^Token token="(.*)"/]
+        if http_authorization.to_s[/^Token token="(.*)"/]
           token = JSON.parse(Base64.decode64($1))
           account = validate_token_and_get_account(token)
           return [token, account]
@@ -97,6 +114,7 @@ module Conjur
       end
       
       def authenticate?
+        path = [ env['SCRIPT_NAME'], env['PATH_INFO'] ].join
         if options[:except]
           options[:except].find{|p| p.match(path)}.nil?
         else
@@ -104,22 +122,27 @@ module Conjur
         end
       end
 
-      def conjur_privilege
-        env['HTTP_X_CONJUR_PRIVILEGE']
-      end
-      
-      def authorization
+      def http_authorization
         env['HTTP_AUTHORIZATION']
       end
-      
-      def remote_ip
+
+      def http_privilege
+        env['HTTP_X_CONJUR_PRIVILEGE']
+      end
+
+      def http_remote_ip
         require 'rack/request'
         ::Rack::Request.new(env).ip
       end
-      
-      def path
-        [ env['SCRIPT_NAME'], env['PATH_INFO'] ].join
+
+      def http_audit_roles
+        env['HTTP_CONJUR_AUDIT_ROLES']
       end
+
+      def http_audit_resources
+        env['HTTP_CONJUR_AUDIT_RESOURCES']
+      end
+
     end
   end
 end

@@ -6,19 +6,23 @@ describe Conjur::Rack::User do
   let(:account){ 'acct' }
   let(:privilege) { nil }
   let(:remote_ip) { nil }
+  let(:audit_roles) { nil }
+  let(:audit_resources) { nil }
   
-  subject(:user) { described_class.new token, account, privilege, remote_ip }
+  subject(:user) { 
+    described_class.new(token, account, 
+      :privilege => privilege, 
+      :remote_ip => remote_ip, 
+      :audit_roles => audit_roles, 
+      :audit_resources => audit_resources 
+    )
+  }
   
   it 'provides field accessors' do
     expect(user.token).to eq token
     expect(user.account).to eq account
     expect(user.conjur_account).to eq account
     expect(user.login).to eq login
-  end
-  
-  it "aliases setter for account to conjur_account" do
-    subject.conjur_account = "changed!"
-    expect(subject.account).to eq("changed!")
   end
   
   describe '#new_assocation' do
@@ -77,11 +81,11 @@ describe Conjur::Rack::User do
       let(:privilege) { "reveal" }
       let(:api){ Conjur::API.new_from_token "the-token" }
       before do
-        subject.stub(:api).and_return api
+        allow(subject).to receive(:api).and_return(api)
       end
       it "checks the API function global_privilege_permitted?" do
-        api.should_receive(:resource).with("!:!:conjur").and_return resource = double(:resource)
-        resource.should_receive(:permitted?).with("reveal").and_return true
+        expect(api).to receive(:resource).with("!:!:conjur").and_return(resource = double(:resource))
+        expect(resource).to receive(:permitted?).with("reveal").and_return(true)
         expect(subject.global_reveal?).to be true
         # The result is cached
         subject.global_reveal?
@@ -104,32 +108,49 @@ describe Conjur::Rack::User do
     end
     context 'when not given args' do
       shared_examples_for "builds the api" do
-        specify {
-          subject.api.should == 'the api'
-        }
+        its(:api) { should == 'the api' }
       end
       
       context "with no extra args" do
         before {
-          Conjur::API.should_receive(:new_from_token).with(token).and_return 'the api'
+          expect(Conjur::API).to receive(:new_from_token).with(token).and_return('the api')
         }
         it_should_behave_like "builds the api"
       end
       context "with remote_ip" do
         let(:remote_ip) { "the-ip" }
         before {
-          Conjur::API.should_receive(:new_from_token).with(token, 'the-ip').and_return 'the api'
+          expect(Conjur::API).to receive(:new_from_token).with(token, 'the-ip').and_return('the api')
         }
         it_should_behave_like "builds the api"
       end
       context "with privilege" do
         let(:privilege) { "elevate" }
         before {
-          Conjur::API.should_receive(:new_from_token).with(token).and_return api = double(:api)
+          expect(Conjur::API).to receive(:new_from_token).with(token).and_return(api = double(:api))
           expect(api).to receive(:with_privilege).with("elevate").and_return('the api')
         }
         it_should_behave_like "builds the api"
       end
+
+      context "with audit resource" do
+        let (:audit_resources) {  'food:bacon' }
+        before {
+          expect(Conjur::API).to receive(:new_from_token).with(token).and_return(api = double(:api))
+          expect(api).to receive(:with_audit_resources).with(['food:bacon']).and_return('the api')
+        }
+        it_should_behave_like "builds the api"
+      end
+
+      context "with audit roles" do
+        let (:audit_roles) {  'user:cook' }
+        before {
+          expect(Conjur::API).to receive(:new_from_token).with(token).and_return(api = double(:api))
+          expect(api).to receive(:with_audit_roles).with(['user:cook']).and_return('the api')
+        }
+        it_should_behave_like "builds the api"
+      end
+
     end
   end
 

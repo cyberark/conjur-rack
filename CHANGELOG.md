@@ -1,3 +1,7 @@
+# v2.1.0
+
+* Add handling for `Conjur-Audit-Roles` and `Conjur-Audit-Resources`
+
 # v2.0.0
 
 * Change `global_sudo?` to `global_elevate?`
