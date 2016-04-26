@@ -6,20 +6,28 @@ module Conjur
     # If it's a hash, it should contain the user login keyed by the string 'login'.
     # The rest of the payload is available as +attributes+.
     class User
-      attr_accessor :token, :account, :privilege, :remote_ip
+      attr_reader :token, :account, :privilege, :remote_ip, :audit_roles, :audit_resources
       
-      def initialize(token, account, privilege = nil, remote_ip = nil)
+      def initialize(token, account, options = {})
         @token = token
         @account = account
-        @privilege = privilege
-        @remote_ip = remote_ip
+        # Third argument used to be the name of privilege, be
+        # backwards compatible:
+        if options.respond_to?(:to_str)
+          @privilege = options
+        else
+          @privilege = options[:privilege]
+          @remote_ip = options[:remote_ip]
+          @audit_roles = options[:audit_roles]
+          @audit_resources = options[:audit_resources]
+        end
       end
       
       # This file was accidently calling account conjur_account,
       # I'm adding an alias in case that's going on anywhere else.
       # -- Jon
       alias :conjur_account :account
-      alias :conjur_account= :account=
+      # alias :conjur_account= :account=
       
       def new_association(cls, params = {})
         cls.new params.merge({userid: login})
@@ -74,16 +82,24 @@ module Conjur
       def role
         api.role(roleid)
       end
-      
+
+      def audit_resources
+        Conjur::API.decode_audit_ids(@audit_resources) if @audit_resources
+      end
+
+      def audit_roles
+        Conjur::API.decode_audit_ids(@audit_roles) if @audit_roles
+      end
+
       def api(cls = Conjur::API)
         args = [ token ]
         args.push remote_ip if remote_ip
         api = cls.new_from_token(*args)
-        if privilege
-          api.with_privilege(privilege)
-        else
-          api
-        end
+        api = api.with_privilege(privilege) if privilege
+        api = api.with_audit_resources(audit_resources) if audit_resources
+        api = api.with_audit_roles(audit_roles) if audit_roles
+
+        api
       end
 
       protected
