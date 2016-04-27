@@ -1,6 +1,7 @@
 # v2.2.0
 
 * resolve 'own' token to CONJUR_ACCOUNT env var
+* add #optional paths to Conjur::Rack authenticator
 	
 # v2.1.0
 
