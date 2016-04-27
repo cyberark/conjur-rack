@@ -43,7 +43,8 @@ module Conjur
       attr_reader :app, :options
       
       # +options+:
-      # :except :: a list of request path patterns for which to skip authentication
+      # :except :: a list of request path patterns for which to skip authentication.
+      # :optional :: request path patterns for which authentication is optional.
       def initialize app, options = {}
         @app = app
         @options = options
@@ -65,14 +66,16 @@ module Conjur
         if authenticate?
           begin
             identity = verify_authorization_and_get_identity # [token, account]
-             
-            conjur_rack[:token] = identity[0]
-            conjur_rack[:account] = identity[1]
-            conjur_rack[:identity] = identity
-            conjur_rack[:privilege] = http_privilege
-            conjur_rack[:remote_ip] = http_remote_ip
-            conjur_rack[:audit_roles] = http_audit_roles
-            conjur_rack[:audit_resources] = http_audit_resources
+            
+            if identity
+              conjur_rack[:token] = identity[0]
+              conjur_rack[:account] = identity[1]
+              conjur_rack[:identity] = identity
+              conjur_rack[:privilege] = http_privilege
+              conjur_rack[:remote_ip] = http_remote_ip
+              conjur_rack[:audit_roles] = http_audit_roles
+              conjur_rack[:audit_resources] = http_audit_resources
+            end
 
           rescue SecurityError, RestClient::Exception
             return error 401, $!.message
@@ -95,8 +98,12 @@ module Conjur
       def validate_token_and_get_account token
         failure = SignatureError.new("Unauthorized: Invalid token")
         raise failure unless (signer = Slosilo.token_signer token)
-        raise failure unless signer =~ /\Aauthn:(.+)\z/
-        return $1
+        if signer == 'own'
+          ENV['CONJUR_ACCOUNT'] or raise failure
+        else
+          raise failure unless signer =~ /\Aauthn:(.+)\z/
+          $1
+        end
       end
       
       def error status, message
@@ -109,17 +116,26 @@ module Conjur
           account = validate_token_and_get_account(token)
           return [token, account]
         else
-          raise AuthorizationError.new("Authorization missing")
+          path = http_path
+          if optional_paths.find{|p| p.match(path)}.nil?
+            raise AuthorizationError.new("Authorization missing")
+          else
+            nil
+          end
         end
       end
       
       def authenticate?
-        path = [ env['SCRIPT_NAME'], env['PATH_INFO'] ].join
+        path = http_path
         if options[:except]
           options[:except].find{|p| p.match(path)}.nil?
         else
           true
         end
+      end
+      
+      def optional_paths
+        options[:optional] || []
       end
 
       def http_authorization
@@ -141,6 +157,10 @@ module Conjur
 
       def http_audit_resources
         env['HTTP_CONJUR_AUDIT_RESOURCES']
+      end
+
+      def http_path
+        [ env['SCRIPT_NAME'], env['PATH_INFO'] ].join
       end
 
     end

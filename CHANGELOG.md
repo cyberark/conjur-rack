@@ -1,3 +1,7 @@
+# v2.2.0
+
+* resolve 'own' token to CONJUR_ACCOUNT env var
+	
 # v2.1.0
 
 * Add handling for `Conjur-Audit-Roles` and `Conjur-Audit-Resources`
