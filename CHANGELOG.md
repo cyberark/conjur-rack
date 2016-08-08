@@ -1,3 +1,7 @@
+# v2.3.0
+
+* Add TRUSTED_PROXIES support
+
 # v2.2.0
 
 * resolve 'own' token to CONJUR_ACCOUNT env var

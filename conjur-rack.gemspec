@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "slosilo"
   spec.add_dependency "conjur-api", ">= 4.17"
-  spec.add_dependency "rack"
+  spec.add_dependency "rack", '~> 1'
 
   spec.add_development_dependency "bundler", "~> 1.3"
   spec.add_development_dependency "rake"

@@ -1,7 +1,31 @@
 require "conjur/rack/user"
+require 'set'
+
+require 'actionpack/action_dispatch/request/http/request'
+
+module ActionDispatch::Request
+  def remote_ip
+    raise "Don't use ActionDispatch::Request#remote_ip"
+  end
+end
 
 module Conjur
   module Rack
+
+    class Request < ::Rack::Request
+
+      def trusted_proxy?(ip)
+        trusted_proxies ? trusted_proxies.any? { |cidr| cidr.include?(ip) } : super
+      end
+
+      def trusted_proxies
+        @trusted_proxies || ENV['TRUSTED_PROXIES'].try do |proxies|
+          cidrs = Set.new(proxies.split(',') + ['127.0.0.1'])
+          @trusted_proxies = cidrs.collect {|cidr| Conjur::CIDR.validate(cidr) }
+        end
+      end
+
+    end
 
     class << self
       def conjur_rack
@@ -148,7 +172,7 @@ module Conjur
 
       def http_remote_ip
         require 'rack/request'
-        ::Rack::Request.new(env).ip
+        Request.new(env).ip
       end
 
       def http_audit_roles
