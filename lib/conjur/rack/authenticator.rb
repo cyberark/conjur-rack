@@ -1,17 +1,6 @@
 require "conjur/rack/user"
 require 'set'
 
-require 'active_support/concern'
-require 'action_dispatch/http/request'
-
-module ActionDispatch
-  class Request
-    def remote_ip
-      raise "Don't use ActionDispatch::Request#remote_ip"
-    end
-  end
-end
-
 module Conjur
   module Rack
 
