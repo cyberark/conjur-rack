@@ -3,27 +3,23 @@ require "conjur/rack/authenticator"
 require "conjur/rack/path_prefix"
 require 'ipaddr'
 
-module ConjurRequest
+module TrustedProxies
+  
   def trusted_proxy?(ip)
-    if proxies
-      proxies.any? { |p| p.include?(ip) }
-    else
-      super
+    trusted_proxies ? trusted_proxies.any? { |cidr| cidr.include?(ip) } : super
+  end
+  
+  def trusted_proxies
+    @trusted_proxies || ENV['TRUSTED_PROXIES'].try do |proxies|
+      cidrs = Set.new(proxies.split(',') + ['127.0.0.1'])
+      @trusted_proxies = cidrs.collect {|cidr| IPAddr.new(cidr) }
     end
   end
-
-  def proxies
-    @proxies ||= (ENV['TRUSTED_PROXIES'] || '').split(',').collect { |cidr| IPAddr.new(cidr) }
-  end
+  
 end
 
 module Rack
   class Request
-    prepend ConjurRequest
+    prepend TrustedProxies
   end
 end
-
-
-
-
-    
