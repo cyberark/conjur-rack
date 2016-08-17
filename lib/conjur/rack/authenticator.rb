@@ -1,6 +1,4 @@
 require "conjur/rack/user"
-require 'set'
-require 'rack/request'
 
 module Conjur
   module Rack

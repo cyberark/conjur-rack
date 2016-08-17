@@ -2,6 +2,7 @@ require "conjur/rack/version"
 require "conjur/rack/authenticator"
 require "conjur/rack/path_prefix"
 require 'ipaddr'
+require 'set'
 
 module TrustedProxies
   
