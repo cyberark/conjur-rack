@@ -112,9 +112,13 @@ module Conjur
       
       def verify_authorization_and_get_identity
         if http_authorization.to_s[/^Token token="(.*)"/]
-          token = JSON.parse(Base64.decode64($1))
-          account = validate_token_and_get_account(token)
-          return [token, account]
+          begin
+            token = JSON.parse(Base64.decode64($1))
+            account = validate_token_and_get_account(token)
+            return [token, account]
+          rescue JSON::ParserError
+            raise AuthorizationError.new("Malformed authorization token")
+          end
         else
           path = http_path
           if optional_paths.find{|p| p.match(path)}.nil?
