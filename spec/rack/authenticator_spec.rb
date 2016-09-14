@@ -130,6 +130,20 @@ describe Conjur::Rack::Authenticator do
         expect(call).to eq([401, {"Content-Type"=>"text/plain", "Content-Length"=>"29"}, ["Malformed authorization token"]])
       end
     end
+
+    context "with JSON junk in token" do
+      let(:env) { { 'HTTP_AUTHORIZATION' => 'Token token="eyJmb28iOiAiYmFyIn0="' } }
+      before do
+        slosilo_class = class_double('Slosilo')
+        stub_const('Slosilo', slosilo_class)
+        allow(slosilo_class).to receive(:new).and_return(Module.new)
+        allow(Slosilo).to receive(:token_signer).and_return(nil)
+      end
+
+      it "returns 401" do
+          expect(call).to eq([401, {"Content-Type"=>"text/plain", "Content-Length"=>"27"}, ["Unauthorized: Invalid token"]])
+      end
+    end
   end
   context "to a protected path" do
     context "without authorization" do
