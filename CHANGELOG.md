@@ -1,3 +1,7 @@
+# v3.0.0.pre
+
+* Initial support for Conjur 5.
+
 # v2.3.0
 
 * Add TRUSTED_PROXIES support
@@ -6,7 +10,7 @@
 
 * resolve 'own' token to CONJUR_ACCOUNT env var
 * add #optional paths to Conjur::Rack authenticator
-	
+
 # v2.1.0
 
 * Add handling for `Conjur-Audit-Roles` and `Conjur-Audit-Resources`

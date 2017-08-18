@@ -6,4 +6,4 @@ source 'https://rubygems.org'
 # Specify your gem's dependencies in conjur-rack.gemspec
 gemspec
 
-gem 'conjur-api', github: 'cyberark/conjur-api-ruby', branch: 'master'
+# gem 'conjur-api', github: 'cyberark/conjur-api-ruby', branch: 'master'
