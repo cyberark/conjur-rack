@@ -29,10 +29,6 @@ module Conjur
       alias :conjur_account :account
       # alias :conjur_account= :account=
       
-      def new_association(cls, params = {})
-        cls.new params.merge({userid: login})
-      end
-      
       # Returns the global privilege which was present on the request, if and only
       # if the user actually has that privilege.
       #

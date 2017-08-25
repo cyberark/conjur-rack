@@ -25,15 +25,6 @@ describe Conjur::Rack::User do
     expect(user.login).to eq login
   end
   
-  describe '#new_assocation' do
-    let(:associate){ Class.new }
-    let(:params){{foo: 'bar'}}
-    it "calls cls.new with params including userid: login" do
-      expect(associate).to receive(:new).with(params.merge(userid: subject.login))
-      subject.new_association(associate, params)
-    end
-  end
-  
   describe '#roleid' do
     let(:login){ tokens.join('/') }
 
