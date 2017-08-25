@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'conjur/rack/user'
 
 describe Conjur::Rack::User do
   let(:login){ 'admin' }
@@ -145,17 +146,17 @@ describe Conjur::Rack::User do
     end
   end
 
-  describe "invalid type payload" do
+  context "with invalid type payload" do
     let(:token){ { "data" => :alice } }
-    it "process the login and attributes" do
-      expect{ subject.login  }.to raise_error("Expecting String or Hash token data, got Symbol")
+    it "raises an error on trying to access the content" do
+      expect{ subject.login }.to raise_error("Expecting String or Hash token data, got Symbol")
     end
   end
 
-  describe "hash payload" do
+  context "with hash payload" do
     let(:token){ { "data" => { "login" => "alice", "capabilities" => { "fry" => "bacon" } } } }
 
-    it "process the login and attributes" do
+    it "processes the login and attributes" do
       original_token = token.deep_dup
 
       expect(subject.login).to eq('alice')
