@@ -1,3 +1,7 @@
+# v3.1.0
+
+* Support for JWT Slosilo tokens.
+
 # v3.0.0.pre
 
 * Initial support for Conjur 5.
