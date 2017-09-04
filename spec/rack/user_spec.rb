@@ -165,4 +165,25 @@ describe Conjur::Rack::User do
       expect(token).to eq original_token
     end
   end
+
+  context "with JWT token" do
+    let(:token) { {"protected"=>"eyJhbGciOiJ0ZXN0IiwidHlwIjoiSldUIn0=",
+ "payload"=>"eyJzdWIiOiJhbGljZSIsImlhdCI6MTUwNDU1NDI2NX0=",
+ "signature"=>"dGVzdHNpZw=="} }
+
+    it "processes the login and attributes" do
+      original_token = token.deep_dup
+
+      expect(subject.login).to eq('alice')
+
+      # TODO: should we only pass unrecognized attrs here?
+      expect(subject.attributes).to eq \
+          'alg' => 'test',
+          'iat' => 1504554265,
+          'sub' => 'alice',
+          'typ' => 'JWT'
+
+      expect(token).to eq original_token
+    end
+  end
 end

@@ -36,6 +36,9 @@ describe Conjur::Rack::Authenticator do
       end
       context "with Conjur authorization" do
         include_context "with authorization"
+
+        it "checks CIDR restrictions"
+
         context "of a valid token" do
           it 'launches app' do
             expect(app).to receive(:call).with(env).and_return app

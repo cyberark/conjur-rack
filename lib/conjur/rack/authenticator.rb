@@ -115,6 +115,7 @@ module Conjur
           begin
             token = JSON.parse(Base64.decode64($1))
             account = validate_token_and_get_account(token)
+            # TODO check CIDR restrictions
             return [token, account]
           rescue JSON::ParserError
             raise AuthorizationError.new("Malformed authorization token")

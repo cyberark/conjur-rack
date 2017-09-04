@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "slosilo"
+  spec.add_dependency "slosilo", "~> 2.1"
   spec.add_dependency "conjur-api", "< 6"
   spec.add_dependency "rack", '~> 1'
 

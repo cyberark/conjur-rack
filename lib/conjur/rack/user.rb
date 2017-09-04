@@ -103,7 +103,21 @@ module Conjur
       def parse_token
         return if @login
 
-        data = token['data'] or raise "No data field in token"
+        if data = token['data']
+          return load_legacy data
+        else
+          begin
+            @token = Slosilo::JWT token
+            return load_jwt token
+          rescue ArgumentError
+            # pass
+          end
+        end
+
+        raise "malformed token"
+      end
+
+      def load_legacy data
         if data.is_a?(String)
           @login = token['data']
         elsif data.is_a?(Hash)
@@ -112,6 +126,11 @@ module Conjur
         else
           raise "Expecting String or Hash token data, got #{data.class.name}"
         end
+      end
+
+      def load_jwt jwt
+        @attributes = jwt.claims.merge jwt.header # just pass all the info
+        @login = jwt.claims['sub'] or raise "No 'sub' field in claims"
       end
     end
   end
