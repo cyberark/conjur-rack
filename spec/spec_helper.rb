@@ -6,6 +6,7 @@ $:.unshift File.join(File.dirname(__FILE__), "lib")
 require 'rspec'
 require 'rspec/its'
 require 'securerandom'
+require 'slosilo'
 
 RSpec.configure do |config|
 end
@@ -27,9 +28,6 @@ RSpec.shared_context "with authorization" do
 
   before do
     allow(app).to receive(:call) { Conjur::Rack.user }
-    slosilo_class = class_double('Slosilo')
-    stub_const('Slosilo', slosilo_class)
-    allow(slosilo_class).to receive(:new).and_return(Module.new)
     allow(Slosilo).to receive(:token_signer).and_return(token_signer)
   end
 

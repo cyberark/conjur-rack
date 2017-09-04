@@ -83,9 +83,6 @@ describe Conjur::Rack::Authenticator do
       context "with JSON junk in token" do
         let(:env) { { 'HTTP_AUTHORIZATION' => 'Token token="eyJmb28iOiAiYmFyIn0="' } }
         before do
-          slosilo_class = class_double('Slosilo')
-          stub_const('Slosilo', slosilo_class)
-          allow(slosilo_class).to receive(:new).and_return(Module.new)
           allow(Slosilo).to receive(:token_signer).and_return(nil)
         end
 
