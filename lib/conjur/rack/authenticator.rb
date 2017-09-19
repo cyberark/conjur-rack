@@ -122,12 +122,24 @@ module Conjur
         raise AuthorizationError.new("Malformed authorization token")
       end
       
+      RECOGNIZED_CLAIMS = [
+        'iat', 'exp', # recognized by Slosilo
+        'cidr', 'sub',
+        'iss', 'aud', 'jti' # RFC 7519, not handled but recognized
+      ].freeze
+
       def verify_authorization_and_get_identity
         if token = parsed_token
           begin
             account = validate_token_and_get_account token
-            if token.respond_to?(:claims) && (cidr = token.claims['cidr'].map(&IPAddr.method(:new)))
-              raise Forbidden, "IP address rejected" unless cidr.any? { |c| c.include? http_remote_ip }
+            if token.respond_to?(:claims)
+              claims = token.claims
+              raise AuthorizationError, "token contains unrecognized claims" unless \
+                  (claims.keys.map(&:to_s) - RECOGNIZED_CLAIMS).empty?
+              if (cidr = claims['cidr'])
+                raise Forbidden, "IP address rejected" unless \
+                    cidr.map(&IPAddr.method(:new)).any? { |c| c.include? http_remote_ip }
+              end
             end
             return [token, account]
           end

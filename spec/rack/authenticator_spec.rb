@@ -3,8 +3,9 @@ require 'spec_helper'
 require 'conjur/rack/authenticator'
 
 describe Conjur::Rack::Authenticator do
+  include_context "with authenticator"
+
   describe "#call" do
-    include_context "with authenticator"
     context "to an unprotected path" do
       let(:except) { [ /^\/foo/ ] }
       let(:env) { { 'SCRIPT_NAME' => '', 'PATH_INFO' => '/foo/bar' } }
@@ -154,6 +155,27 @@ describe Conjur::Rack::Authenticator do
         expect(headers).to eq "Content-Type" => "text/plain", "Content-Length" => message.length.to_s
         expect(body.join).to eq message
       end
+    end
+  end
+
+  # protected internal methods
+
+  describe '#verify_authorization_and_get_identity' do
+    it "accepts JWT tokens without CIDR restrictions" do
+      mock_jwt sub: 'user'
+      expect { subject.send :verify_authorization_and_get_identity }.to_not raise_error
+    end
+
+    it "rejects JWT tokens with unrecognized claims" do
+      mock_jwt extra: 'field'
+      expect { subject.send :verify_authorization_and_get_identity }.to raise_error \
+          Conjur::Rack::Authenticator::AuthorizationError
+    end
+
+    def mock_jwt claims
+      token = Slosilo::JWT.new(claims).add_signature(alg: 'none') {}
+      allow(subject).to receive(:parsed_token) { token }
+      allow(Slosilo).to receive(:token_signer).with(token).and_return 'authn:test'
     end
   end
 end
