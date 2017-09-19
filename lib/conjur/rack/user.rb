@@ -103,18 +103,14 @@ module Conjur
       def parse_token
         return if @login
 
+        @token = Slosilo::JWT token
+        load_jwt token
+      rescue ArgumentError
         if data = token['data']
           return load_legacy data
         else
-          begin
-            @token = Slosilo::JWT token
-            return load_jwt token
-          rescue ArgumentError
-            # pass
-          end
+          raise "malformed token"
         end
-
-        raise "malformed token"
       end
 
       def load_legacy data
@@ -129,7 +125,7 @@ module Conjur
       end
 
       def load_jwt jwt
-        @attributes = jwt.claims.merge jwt.header # just pass all the info
+        @attributes = jwt.claims.merge (jwt.header || {}) # just pass all the info
         @login = jwt.claims['sub'] or raise "No 'sub' field in claims"
       end
     end
