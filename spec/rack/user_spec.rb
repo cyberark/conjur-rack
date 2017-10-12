@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'conjur/rack/user'
 
 describe Conjur::Rack::User do
   let(:login){ 'admin' }
@@ -23,15 +24,6 @@ describe Conjur::Rack::User do
     expect(user.account).to eq account
     expect(user.conjur_account).to eq account
     expect(user.login).to eq login
-  end
-  
-  describe '#new_assocation' do
-    let(:associate){ Class.new }
-    let(:params){{foo: 'bar'}}
-    it "calls cls.new with params including userid: login" do
-      expect(associate).to receive(:new).with(params.merge(userid: subject.login))
-      subject.new_association(associate, params)
-    end
   end
   
   describe '#roleid' do
@@ -154,21 +146,42 @@ describe Conjur::Rack::User do
     end
   end
 
-  describe "invalid type payload" do
+  context "with invalid type payload" do
     let(:token){ { "data" => :alice } }
-    it "process the login and attributes" do
-      expect{ subject.login  }.to raise_error("Expecting String or Hash token data, got Symbol")
+    it "raises an error on trying to access the content" do
+      expect{ subject.login }.to raise_error("Expecting String or Hash token data, got Symbol")
     end
   end
 
-  describe "hash payload" do
+  context "with hash payload" do
     let(:token){ { "data" => { "login" => "alice", "capabilities" => { "fry" => "bacon" } } } }
 
-    it "process the login and attributes" do
+    it "processes the login and attributes" do
       original_token = token.deep_dup
 
       expect(subject.login).to eq('alice')
       expect(subject.attributes).to eq({"capabilities" => { "fry" => "bacon" }})
+
+      expect(token).to eq original_token
+    end
+  end
+
+  context "with JWT token" do
+    let(:token) { {"protected"=>"eyJhbGciOiJ0ZXN0IiwidHlwIjoiSldUIn0=",
+ "payload"=>"eyJzdWIiOiJhbGljZSIsImlhdCI6MTUwNDU1NDI2NX0=",
+ "signature"=>"dGVzdHNpZw=="} }
+
+    it "processes the login and attributes" do
+      original_token = token.deep_dup
+
+      expect(subject.login).to eq('alice')
+
+      # TODO: should we only pass unrecognized attrs here?
+      expect(subject.attributes).to eq \
+          'alg' => 'test',
+          'iat' => 1504554265,
+          'sub' => 'alice',
+          'typ' => 'JWT'
 
       expect(token).to eq original_token
     end

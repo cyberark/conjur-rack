@@ -39,6 +39,8 @@ module Conjur
       end
       class SignatureError < SecurityError
       end
+      class Forbidden < SecurityError
+      end
       
       attr_reader :app, :options
       
@@ -77,6 +79,8 @@ module Conjur
               conjur_rack[:audit_resources] = http_audit_resources
             end
 
+          rescue Forbidden
+            return error 403, $!.message
           rescue SecurityError, RestClient::Exception
             return error 401, $!.message
           end
@@ -109,15 +113,35 @@ module Conjur
       def error status, message
         [status, { 'Content-Type' => 'text/plain', 'Content-Length' => message.length.to_s }, [message] ]
       end
+
+      def parsed_token
+        token = http_authorization.to_s[/^Token token="(.*)"/, 1]
+        token = token && JSON.parse(Base64.decode64(token))
+        token = Slosilo::JWT token rescue token
+      rescue JSON::ParserError
+        raise AuthorizationError.new("Malformed authorization token")
+      end
       
+      RECOGNIZED_CLAIMS = [
+        'iat', 'exp', # recognized by Slosilo
+        'cidr', 'sub',
+        'iss', 'aud', 'jti' # RFC 7519, not handled but recognized
+      ].freeze
+
       def verify_authorization_and_get_identity
-        if http_authorization.to_s[/^Token token="(.*)"/]
+        if token = parsed_token
           begin
-            token = JSON.parse(Base64.decode64($1))
-            account = validate_token_and_get_account(token)
+            account = validate_token_and_get_account token
+            if token.respond_to?(:claims)
+              claims = token.claims
+              raise AuthorizationError, "token contains unrecognized claims" unless \
+                  (claims.keys.map(&:to_s) - RECOGNIZED_CLAIMS).empty?
+              if (cidr = claims['cidr'])
+                raise Forbidden, "IP address rejected" unless \
+                    cidr.map(&IPAddr.method(:new)).any? { |c| c.include? http_remote_ip }
+              end
+            end
             return [token, account]
-          rescue JSON::ParserError
-            raise AuthorizationError.new("Malformed authorization token")
           end
         else
           path = http_path

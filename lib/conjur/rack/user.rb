@@ -29,10 +29,6 @@ module Conjur
       alias :conjur_account :account
       # alias :conjur_account= :account=
       
-      def new_association(cls, params = {})
-        cls.new params.merge({userid: login})
-      end
-      
       # Returns the global privilege which was present on the request, if and only
       # if the user actually has that privilege.
       #
@@ -107,7 +103,17 @@ module Conjur
       def parse_token
         return if @login
 
-        data = token['data'] or raise "No data field in token"
+        @token = Slosilo::JWT token
+        load_jwt token
+      rescue ArgumentError
+        if data = token['data']
+          return load_legacy data
+        else
+          raise "malformed token"
+        end
+      end
+
+      def load_legacy data
         if data.is_a?(String)
           @login = token['data']
         elsif data.is_a?(Hash)
@@ -116,6 +122,11 @@ module Conjur
         else
           raise "Expecting String or Hash token data, got #{data.class.name}"
         end
+      end
+
+      def load_jwt jwt
+        @attributes = jwt.claims.merge (jwt.header || {}) # just pass all the info
+        @login = jwt.claims['sub'] or raise "No 'sub' field in claims"
       end
     end
   end
