@@ -10,5 +10,3 @@ git_source(:github) { |name| "https://github.com/#{name}.git" }
 gemspec
 
 # gem 'conjur-api', github: 'cyberark/conjur-api-ruby', branch: 'master'
-
-gem 'slosilo', github: 'cyberark/slosilo', branch: 'feature/jwt'
