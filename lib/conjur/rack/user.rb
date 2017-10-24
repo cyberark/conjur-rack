@@ -37,7 +37,9 @@ module Conjur
       # actually have that privilege according to the Conjur server.
       def validated_global_privilege
         unless @validated_global_privilege
-          @privilege = nil if @privilege && !api.global_privilege_permitted?(@privilege)
+          @privilege = nil unless @privilege &&
+                  api.respond_to?(:global_privilege_permitted?) &&
+                  api.global_privilege_permitted?(@privilege)
           @validated_global_privilege = true
         end
         @privilege
@@ -91,9 +93,15 @@ module Conjur
         args = [ token ]
         args.push remote_ip if remote_ip
         api = cls.new_from_token(*args)
-        api = api.with_privilege(privilege) if privilege
-        api = api.with_audit_resources(audit_resources) if audit_resources
-        api = api.with_audit_roles(audit_roles) if audit_roles
+
+        # These are features not present in some API versions.
+        # Test for them and only apply if it makes sense. Ignore otherwise.
+        %i(privilege audit_resources audit_roles).each do |feature|
+          meth = "with_#{feature}".intern
+          if api.respond_to?(meth) && (value = send(feature))
+            api = api.send meth, value
+          end
+        end
 
         api
       end

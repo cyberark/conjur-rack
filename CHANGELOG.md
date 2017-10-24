@@ -1,3 +1,8 @@
+# unreleased version
+
+* Ignore headers such as Conjur-Privilege or Conjur-Audit if they're not
+supported by the API (instead of erroring out).
+
 # v3.1.0
 
 * Support for JWT Slosilo tokens.

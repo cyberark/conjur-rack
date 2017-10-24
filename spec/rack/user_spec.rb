@@ -69,22 +69,34 @@ describe Conjur::Rack::User do
   end
   
   describe "#global_reveal?" do
+    let(:api){ double "conjur-api" }
+    before { allow(subject).to receive(:api).and_return(api) }
+
     context "with global privilege" do
       let(:privilege) { "reveal" }
-      let(:api){ Conjur::API.new_from_token "the-token" }
-      before do
-        allow(subject).to receive(:api).and_return(api)
+
+      context "when not supported" do
+        before { expect(api).not_to respond_to :global_privilege_permitted? }
+        it "simply returns false" do
+          expect(subject.global_reveal?).to be false
+        end
       end
-      it "checks the API function global_privilege_permitted?" do
-        expect(api).to receive(:resource).with("!:!:conjur").and_return(resource = double(:resource))
-        expect(resource).to receive(:permitted?).with("reveal").and_return(true)
-        expect(subject.global_reveal?).to be true
-        # The result is cached
-        subject.global_reveal?
+
+      context "when supported" do
+        before do
+          allow(api).to receive(:global_privilege_permitted?).with('reveal') { true }
+        end
+        it "checks the API function global_privilege_permitted?" do
+          expect(subject.global_reveal?).to be true
+          # The result is cached
+          expect(api).not_to receive :global_privilege_permitted?
+          subject.global_reveal?
+        end
       end
     end
+
     context "without a global privilege" do
-      it "simply returns nil" do
+      it "simply returns false" do
         expect(subject.global_reveal?).to be false
       end
     end
@@ -98,51 +110,71 @@ describe Conjur::Rack::User do
         expect(subject.api(cls)).to eq('the api')
       end
     end
+
     context 'when not given args' do
-      shared_examples_for "builds the api" do
-        its(:api) { should == 'the api' }
+      let(:api) { double :api }
+      before do
+        allow(Conjur::API).to receive(:new_from_token).with(token).and_return(api)
       end
-      
-      context "with no extra args" do
-        before {
-          expect(Conjur::API).to receive(:new_from_token).with(token).and_return('the api')
-        }
-        it_should_behave_like "builds the api"
+
+      it "builds the api from token" do
+        expect(subject.api).to eq api
       end
+
       context "with remote_ip" do
         let(:remote_ip) { "the-ip" }
-        before {
-          expect(Conjur::API).to receive(:new_from_token).with(token, 'the-ip').and_return('the api')
-        }
-        it_should_behave_like "builds the api"
+        it "passes the IP to the API constructor" do
+          expect(Conjur::API).to receive(:new_from_token).with(token, 'the-ip').and_return(api)
+          expect(subject.api).to eq api
+        end
       end
+
       context "with privilege" do
         let(:privilege) { "elevate" }
-        before {
-          expect(Conjur::API).to receive(:new_from_token).with(token).and_return(api = double(:api))
-          expect(api).to receive(:with_privilege).with("elevate").and_return('the api')
-        }
-        it_should_behave_like "builds the api"
+        it "applies the privilege on the API object" do
+          expect(api).to receive(:with_privilege).with("elevate").and_return "privileged api"
+          expect(subject.api).to eq "privileged api"
+        end
       end
 
-      context "with audit resource" do
-        let (:audit_resources) {  'food:bacon' }
-        before {
-          expect(Conjur::API).to receive(:new_from_token).with(token).and_return(api = double(:api))
-          expect(api).to receive(:with_audit_resources).with(['food:bacon']).and_return('the api')
-        }
-        it_should_behave_like "builds the api"
+      context "when audit supported" do
+        before do
+          # If we're testing on an API version that doesn't
+          # support audit this method will be missing, so stub.
+          unless Conjur::API.respond_to? :decode_audit_ids
+            # not exactly a faithful reimplementation, but good enough for here
+            allow(Conjur::API).to receive(:decode_audit_ids) {|x|[x]}
+          end
+        end
+
+        context "with audit resource" do
+          let (:audit_resources) { 'food:bacon' }
+          it "applies the audit resource on the API object" do
+            expect(api).to receive(:with_audit_resources).with(['food:bacon']).and_return('the api')
+            expect(subject.api).to eq 'the api'
+          end
+        end
+
+        context "with audit roles" do
+          let (:audit_roles) { 'user:cook' }
+          it "applies the audit role on the API object" do
+            expect(api).to receive(:with_audit_roles).with(['user:cook']).and_return('the api')
+            expect(subject.api).to eq 'the api'
+          end
+        end
       end
 
-      context "with audit roles" do
-        let (:audit_roles) {  'user:cook' }
-        before {
-          expect(Conjur::API).to receive(:new_from_token).with(token).and_return(api = double(:api))
-          expect(api).to receive(:with_audit_roles).with(['user:cook']).and_return('the api')
-        }
-        it_should_behave_like "builds the api"
+      context "when audit not supported" do
+        before do
+          expect(api).not_to respond_to :with_audit_resources
+          expect(api).not_to respond_to :with_audit_roles
+        end
+        let (:audit_resources) { 'food:bacon' }
+        let (:audit_roles) { 'user:cook' }
+        it "ignores audit roles and resources" do
+          expect(subject.api).to eq api
+        end
       end
-
     end
   end
 
