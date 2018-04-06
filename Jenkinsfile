@@ -39,7 +39,8 @@ pipeline {
             git fetch -q
             
             # note when tag not found git rev-parse will just print its name
-            TAG=`git rev-parse tags/v$VERSION 2>/dev/null || :`
+            # TAG=`git rev-parse tags/v$VERSION 2>/dev/null || :`
+            TAG=`git rev-list -n 1 "v$VERSION" 2>/dev/null || :`
             echo Tag v$VERSION: $TAG
             
             HEAD=`git rev-parse HEAD`
