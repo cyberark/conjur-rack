@@ -1,5 +1,9 @@
 # unreleased version
 
+# v4.0.0
+
+* Bump `conjur-api` to v5.1, `rack` to v2, `bundler` to v1.16
+* Add Jenkinsfile to project
 * Ignore headers such as Conjur-Privilege or Conjur-Audit if they're not
 supported by the API (instead of erroring out).
 
