@@ -1,11 +1,9 @@
-#!/usr/bin/env groovy
-
 pipeline {
   agent { label 'executor-v2' }
 
   options {
     timestamps()
-    buildDiscarder(logRotator(numToKeepStr: '30'))
+    buildDiscarder(logRotator(daysToKeepStr: '30'))
   }
 
   stages {
@@ -13,7 +11,7 @@ pipeline {
       steps {
         sh './test.sh'
 
-        junit 'features/reports/**/*.xml, spec/reports/*.xml'
+        junit 'spec/reports/*.xml'
       }
     }
 
@@ -24,6 +22,7 @@ pipeline {
 
       when {
         expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+        branch "master"
         expression {
           def exitCode = sh returnStatus: true, script: ''' set +x
             echo "Determining if publishing is requested..."
