@@ -9,4 +9,4 @@ docker run --rm \
   -w /usr/src/app \
   -e CONJUR_ENV=ci \
   $TEST_IMAGE \
-  bash -c "bundle update && bundle exec rake spec"
+  bash -c "gem install bundler && bundle update && bundle exec rake spec"
