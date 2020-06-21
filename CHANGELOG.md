@@ -1,5 +1,9 @@
 # unreleased version
 
+# v4.1.0
+
+* Bump `slosilo` to v2.2 in order to be FIPS compliant
+
 # v4.0.0
 
 * Bump `rack` to v2, `bundler` to v1.16 in gemspec
