@@ -1,5 +1,8 @@
 # unreleased version
 
+* Bump `bundler` to v2.1.4 to resolve CVE-2019-3881 
+  [cyberark/conjur-rack#23](https://github.com/cyberark/conjur-rack/issues/23)
+
 # v4.2.0
 
 * Bump `slosilo` to v2.2 in order to be FIPS compliant
