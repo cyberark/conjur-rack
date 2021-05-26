@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-TEST_IMAGE='ruby:2.3.4'
+TEST_IMAGE='ruby:2.5'
 
 rm -f Gemfile.lock
 
@@ -9,4 +9,4 @@ docker run --rm \
   -w /usr/src/app \
   -e CONJUR_ENV=ci \
   $TEST_IMAGE \
-  bash -c "gem update --system && gem uninstall -i /usr/local/lib/ruby/gems/2.3.0 bundler && gem install bundler -v 1.16.0 && bundle update && bundle exec rake spec"
+  bash -c "gem update --system && gem install bundler:2.2.18 && bundle update && bundle exec rake spec"
