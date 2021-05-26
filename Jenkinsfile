@@ -18,7 +18,7 @@ pipeline {
     // Only publish to RubyGems if the HEAD is
     // tagged with the same version as in version.rb
     stage('Publish to RubyGems') {
-      agent { label 'releaser-v2' }
+      agent { label 'executor-v2' }
 
       when {
         expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
