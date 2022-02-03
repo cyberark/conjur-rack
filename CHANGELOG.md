@@ -1,5 +1,11 @@
 # unreleased version
 
+# v5.0.0
+
+* Support Ruby 3.
+* Bump `slosilo` to v3.0 with ruby 3.
+* Remove pinned `bundler` version, use default system bundler.
+
 # v4.2.0
 
 * Bump `slosilo` to v2.2 in order to be FIPS compliant
