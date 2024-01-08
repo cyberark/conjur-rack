@@ -1,7 +1,14 @@
 #!/bin/bash -ex
 
-docker pull registry.tld/conjurinc/publish-rubygem
+echo "*** Starting Publish"
 
+git clone git@github.com:conjurinc/release-tools.git
+
+export PATH=$PWD/release-tools/bin/:$PATH
+
+echo "***--- Starting Summon"
 summon --yaml "RUBYGEMS_API_KEY: !var rubygems/api-key" \
-  docker run --rm --env-file @SUMMONENVFILE -v "$(pwd)":/opt/src \
-  registry.tld/conjurinc/publish-rubygem conjur-rack
+  publish-rubygem conjur-rack
+echo "***--- Finished Summon"
+
+echo "*** Finished Publish"

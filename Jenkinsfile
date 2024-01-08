@@ -11,16 +11,16 @@ pipeline {
   }
 
   stages {
+
     stage('Run tests') {
       steps {
         sh './test.sh'
-
-        junit 'spec/reports/*.xml'
       }
     }
 
     // Only publish to RubyGems if the HEAD is
     // tagged with the same version as in version.rb
+
     stage('Publish to RubyGems') {
       agent { label 'executor-v2' }
 
@@ -54,11 +54,24 @@ pipeline {
         }
       }
       steps {
+        // Clean up first
+        sh '''docker run -i --rm -v $PWD://usr/src/app -w /usr/src/app --entrypoint /bin/sh alpine/git \
+            -c "git config --global --add safe.directory /usr/src/app && \
+            git clean -fxd" '''
+
         sh './publish.sh'
+
+        // Clean up again...
+        sh '''docker run -i --rm -v $PWD://usr/src/app -w /usr/src/app --entrypoint /bin/sh alpine/git \
+            -c "git config --global --add safe.directory /usr/src/app && \
+            git clean -fxd" '''
+        deleteDir()
+
       }
     }
-  }
 
+  }
+  
   post {
     always {
       cleanupAndNotify(currentBuild.currentResult)
